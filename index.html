@@ -133,6 +133,7 @@
     text-transform:uppercase;
   }
   .toggle-pw:hover{color:var(--gold);}
+  .call-link{display:inline-block;margin-bottom:10px;color:var(--gold);text-decoration:underline;font-size:0.92rem;}
   .err-msg{
     color:var(--error);font-size:0.78rem;margin-top:7px;display:none;
   }
@@ -412,7 +413,6 @@
   .strip h2{font-size:clamp(1.8rem,3vw,2.4rem);line-height:1.15;margin-bottom:20px;}
   .strip p{color:var(--cream-dim);font-size:0.98rem;max-width:440px;}
   .stat-row{display:flex;gap:44px;flex-wrap:wrap;}
-  .stat{}
   .stat .n{font-family:'Fraunces',serif;font-size:2.4rem;color:var(--gold);}
   .stat .l{font-family:'JetBrains Mono',monospace;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--cream-dim);}
 
@@ -434,12 +434,27 @@
   }
   .overlay.open{opacity:1;pointer-events:auto;}
   .drawer{
-    position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;
-    background:var(--bg-panel);z-index:201;
-    transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);
-    display:flex;flex-direction:column;
-    border-left:1px solid var(--line-strong);
-  }
+  position:fixed;
+  top:0;
+  right:0;
+  bottom:0;
+  width:420px;
+  max-width:92vw;
+  background:var(--bg-panel);
+  z-index:201;
+
+  transform:translateX(100%);
+  transition:transform .35s cubic-bezier(.2,.8,.2,1);
+
+  display:flex;
+  flex-direction:column;
+
+  border-left:1px solid var(--line-strong);
+
+  /* FIX SCROLL */
+  overflow-y:auto;
+  overflow-x:hidden;
+}
   .drawer.open{transform:translateX(0);}
   .drawer-head{
     padding:26px 26px 20px;border-bottom:1px dashed var(--line-strong);
@@ -451,7 +466,16 @@
     line-height:1;padding:4px;
   }
   .close-btn:hover{color:var(--cream);}
-  .drawer-body{flex:1;overflow-y:auto;padding:10px 26px;}
+  .drawer-body{
+  padding:10px 26px;
+  flex:none;
+  overflow:visible;
+}
+.drawer-foot{
+  padding:22px 26px 28px;
+  border-top:1px dashed var(--line-strong);
+  flex:none;
+}
   .cart-line{
     padding:18px 0;border-bottom:1px dotted var(--line);
     display:flex;gap:12px;
@@ -508,8 +532,8 @@
   ::-webkit-scrollbar-thumb{background:var(--line-strong);}
 
   /* ---------- VIEW TOGGLE ---------- */
-  #mainSite{display:none;}
-  #authScreen{display:grid;}
+  #mainSite{display:block;}
+  #authScreen{display:none;}
 
 </style>
 </head>
@@ -752,18 +776,19 @@
       </div>
 
       <label>Contact number</label>
-      <input class="field" id="phoneInput" type="tel" placeholder="For order updates">
+      <a class="call-link" href="tel:+917670916703">Call +91 7670916703</a>
+      <input class="field" id="phoneInput" type="tel" placeholder="For order updates" value="7670916703">
       <label>Notes for the kitchen (optional)</label>
       <input class="field" id="notesInput" type="text" placeholder="Allergies, extra napkins, etc.">
 
       <label>Payment method</label>
       <div class="toggle-row" id="paymentRow">
-        <button class="active" id="payCard" onclick="setPayment('card')">Card</button>
-        <button id="payCod" onclick="setPayment('cod')">Cash</button>
+        <button id="payCard" onclick="setPayment('card')">Card</button>
+        <button class="active" id="payCod" onclick="setPayment('cod')">Cash</button>
         <button id="payUpi" onclick="setPayment('upi')">UPI</button>
       </div>
 
-      <div id="cardFields">
+      <div id="cardFields" style="display:none;">
         <input class="field" id="cardNumber" type="text" inputmode="numeric" maxlength="19" placeholder="Card number">
         <div class="field-row">
           <input class="field" id="cardExpiry" type="text" inputmode="numeric" maxlength="5" placeholder="MM/YY">
@@ -773,11 +798,11 @@
       </div>
 
       <div id="upiFields" style="display:none;">
-        <input class="field" id="upiId" type="text" placeholder="yourname@bank">
+        <input class="field" id="upiId" type="text" placeholder="7670916703@upi" value="7670916703@upi">
         <div class="cart-err" id="upiErr">Enter a valid UPI ID.</div>
       </div>
 
-      <div id="codNote" class="cod-note" style="display:none;">Pay with cash when your order arrives.</div>
+      <div id="codNote" class="cod-note" style="display:block;">Pay with cash when your order arrives.</div>
     </div>
     <div class="sum-row"><span>Subtotal</span><span class="mono" id="subtotalVal">$0.00</span></div>
     <div class="sum-row"><span id="feeLabel">Delivery fee</span><span class="mono" id="feeVal">$0.00</span></div>
@@ -1125,6 +1150,8 @@
     setTimeout(()=>{ btn.textContent='Add to order'; btn.classList.remove('added'); }, 1100);
     renderCart();
     document.getElementById('cartCount').textContent = cart.reduce((a,c)=>a+c.qty,0);
+    document.getElementById('placeOrderBtn').disabled = cart.length===0;
+    openDrawer();
   }
 
   function removeLine(lineId){
@@ -1155,7 +1182,7 @@
     updateSummary();
   }
 
-  let paymentMethod = 'card';
+  let paymentMethod = 'cod';
 
   function setFulfil(mode){
     fulfil = mode;
@@ -1177,6 +1204,23 @@
     document.getElementById('codNote').style.display = mode==='cod' ? 'block' : 'none';
     document.getElementById('cardErr').classList.remove('show');
     document.getElementById('upiErr').classList.remove('show');
+  }
+
+  function resetCheckoutForm(){
+    cart = [];
+    renderCart();
+    document.getElementById('cartCount').textContent = '0';
+    document.getElementById('phoneInput').value = '7670916703';
+    document.getElementById('notesInput').value = '';
+    document.getElementById('addrStreet').value = '';
+    document.getElementById('addrApt').value = '';
+    document.getElementById('addrCity').value = '';
+    document.getElementById('addrZip').value = '';
+    document.getElementById('cardNumber').value = '';
+    document.getElementById('cardExpiry').value = '';
+    document.getElementById('cardCvv').value = '';
+    document.getElementById('upiId').value = '7670916703@upi';
+    closeDrawer();
   }
 
   // ---- input formatting: card number & expiry ----
@@ -1215,7 +1259,12 @@
   }
   document.getElementById('openCart').addEventListener('click', openDrawer);
 
-  function placeOrder(){
+  async function placeOrder(){
+    if(cart.length === 0){
+      alert('Your cart is empty. Add something delicious before placing an order.');
+      return;
+    }
+
     let hasError = false;
 
     const phone = document.getElementById('phoneInput').value.trim();
@@ -1224,7 +1273,9 @@
       return;
     }
 
-    // --- address validation (delivery only) ---
+    const time = document.getElementById('timeSelect').value;
+    const notes = document.getElementById('notesInput').value.trim();
+
     let addressLine = '';
     if(fulfil === 'delivery'){
       const street = document.getElementById('addrStreet').value.trim();
@@ -1237,8 +1288,8 @@
       addressLine = [street, apt, city, zip].filter(Boolean).join(', ');
     }
 
-    // --- payment validation ---
     let paymentLine = '';
+    let upiUri;
     if(paymentMethod === 'card'){
       const num = document.getElementById('cardNumber').value.replace(/\s/g,'');
       const exp = document.getElementById('cardExpiry').value;
@@ -1253,35 +1304,76 @@
       document.getElementById('upiErr').classList.toggle('show', !upiOk);
       if(!upiOk) hasError = true;
       paymentLine = `UPI (${upi})`;
+      if(upiOk) {
+        upiUri = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent('Smoke & Thyme')}&cu=INR`;
+      }
     } else {
       paymentLine = 'Cash on delivery';
     }
 
     if(hasError) return;
 
-    const time = document.getElementById('timeSelect').value;
-    const totalText = document.getElementById('totalVal').textContent;
-    const addrPart = fulfil === 'delivery' ? `\nDeliver to: ${addressLine}` : '';
-    alert(`Order placed! 🔥\n\n${fulfil==='pickup' ? 'Pickup' : 'Delivery'} at ${time}${addrPart}\nPayment: ${paymentLine}\nTotal: ${totalText}\n\nWe'll text ${phone} with updates.`);
+    const paymentDetails = paymentMethod === 'card'
+      ? document.getElementById('cardNumber').value.slice(-4)
+      : paymentMethod === 'upi'
+      ? document.getElementById('upiId').value.trim()
+      : '';
 
-    cart = [];
-    renderCart();
-    document.getElementById('cartCount').textContent = '0';
-    document.getElementById('phoneInput').value = '';
-    document.getElementById('notesInput').value = '';
-    document.getElementById('addrStreet').value = '';
-    document.getElementById('addrApt').value = '';
-    document.getElementById('addrCity').value = '';
-    document.getElementById('addrZip').value = '';
-    document.getElementById('cardNumber').value = '';
-    document.getElementById('cardExpiry').value = '';
-    document.getElementById('cardCvv').value = '';
-    document.getElementById('upiId').value = '';
-    closeDrawer();
+    const order = {
+      items: cart,
+      fulfilment: fulfil,
+      time: time,
+      phone: phone,
+      notes: notes,
+      paymentMethod: paymentMethod,
+      paymentDetails: paymentDetails
+    };
+
+    try {
+
+      const response = await fetch(
+        `/api/orders`,
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json'
+          },
+
+          body: JSON.stringify(order)
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        if (upiUri) {
+          const userConfirmed = confirm('Order accepted! Tap OK to open your UPI app and complete payment.');
+          if (userConfirmed) {
+            window.location.href = upiUri;
+            return;
+          }
+        }
+        alert('Order sent to backend! 🔥');
+        resetCheckoutForm();
+      } else {
+        alert('Backend rejected the order.');
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert('Could not connect to the backend.');
+    }
+
+    resetCheckoutForm();
   }
 
   renderMenu();
   renderCart();
+  document.getElementById('phoneInput').value = '7670916703';
+  document.getElementById('upiId').value = '7670916703@upi';
 
 </script>
 
