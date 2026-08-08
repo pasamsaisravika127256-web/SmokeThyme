@@ -38,7 +38,7 @@ if (!fs.existsSync(ordersFile)) {
 
 // Test backend
 app.get("/", (req, res) => {
-    res.send("Smoke & Thyme Backend is working!");
+    res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // Get all orders
