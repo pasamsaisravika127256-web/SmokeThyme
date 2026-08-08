@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+
+body {
+    margin: 0;
+    background: #1B1812;
+    color: #F6F1E4;
+    font-family: Arial, sans-serif;
+}
+
+.admin-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 24px;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.subtitle {
+    color: #C9C0AC;
+    margin-top: 8px;
+}
+
+.admin-panel {
+    background: #241F17;
+    border: 1px solid #555;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.login-row {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: center;
+}
+
+.login-row input,
+.login-row button {
+    padding: 12px 14px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #1B1812;
+    color: #F6F1E4;
+}
+
+.login-row button {
+    background: #D4A24C;
+    color: #1B1812;
+    border-color: transparent;
+    cursor: pointer;
+}
+
+.error-msg {
+    color: #E4695A;
+    margin-top: 8px;
+}
+
+.stats-row {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: #1B1812;
+    border: 1px solid #555;
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.stat-card h3 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    color: #C9C0AC;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.status-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.status-buttons button {
+    padding: 8px 12px;
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #1B1812;
+    color: #F6F1E4;
+    cursor: pointer;
+}
+
+.status-buttons button.cancel {
+    border-color: #E4695A;
+    color: #E4695A;
+}
+
+.status-buttons button.update {
+    border-color: #D4A24C;
+}
+
+.order-top {
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.admin-container h1 {
+    margin-bottom: 30px;
+}
+
+.order-card {
+    background: #241F17;
+    border: 1px solid #555;
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.order-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #555;
+    padding-bottom: 15px;
+}
+
+.order-top h2 {
+    margin: 0;
+}
+
+.order-top small {
+    color: #aaa;
+}
+
+.status {
+    background: #D4A24C;
+    color: #1B1812;
+    padding: 7px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.items {
+    margin-top: 20px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dotted #555;
+}
+
+.details {
+    margin-top: 20px;
+    color: #C9C0AC;
+}
+
+.details p {
+    margin: 8px 0;
+}
+
+</style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <div>
+                <h1>Smoke & Thyme — Admin</h1>
+                <p class="subtitle">Manage orders, status, and kitchen workflow.</p>
+            </div>
+            <button id="logoutBtn" style="display:none;">Logout</button>
+        </div>
+
+        <div class="admin-panel" id="loginPanel">
+            <h2>Admin login</h2>
+            <div class="login-row">
+                <input id="adminUser" placeholder="Username" />
+                <input id="adminPassword" type="password" placeholder="Password" />
+                <button onclick="loginAdmin()">Login</button>
+                <div id="loginError" class="error-msg"></div>
+            </div>
+        </div>
+
+        <div class="admin-panel" id="dashboardPanel" style="display:none;">
+            <div class="stats-row" id="statsRow"></div>
+            <div id="ordersContainer">Loading orders...</div>
+        </div>
+    </div>
+<script>
+
+const API_BASE = window.location.origin;
+let adminLoggedIn = false;
+
+function showPanel(panelId) {
+    document.getElementById('loginPanel').style.display = panelId === 'loginPanel' ? 'block' : 'none';
+    document.getElementById('dashboardPanel').style.display = panelId === 'dashboardPanel' ? 'block' : 'none';
+    document.getElementById('logoutBtn').style.display = panelId === 'dashboardPanel' ? 'inline-flex' : 'none';
+}
+
+async function loginAdmin() {
+    const username = document.getElementById('adminUser').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    const errorEl = document.getElementById('loginError');
+    errorEl.textContent = '';
+
+    if (!username || !password) {
+        errorEl.textContent = 'Enter username and password.';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+            mode: 'cors'
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            errorEl.textContent = result.message || 'Login failed.';
+            return;
+        }
+
+        adminLoggedIn = true;
+        showPanel('dashboardPanel');
+        loadDashboard();
+    } catch (error) {
+        console.error('Login error', error);
+        errorEl.textContent = 'Could not connect to backend.';
+    }
+}
+
+function logoutAdmin() {
+    adminLoggedIn = false;
+    showPanel('loginPanel');
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPassword').value = '';
+}
+
+document.getElementById('logoutBtn').addEventListener('click', logoutAdmin);
+
+async function loadDashboard() {
+    if (!adminLoggedIn) {
+        return;
+    }
+    await loadOrders();
+    await renderStats();
+}
+
+async function loadOrders() {
+    const container = document.getElementById('ordersContainer');
+    container.innerHTML = '<p>Loading orders...</p>';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/orders`, { mode: 'cors' });
+        const result = await response.json();
+
+        if (!result.success) {
+            container.innerHTML = `<p>Error loading orders: ${result.message || 'Unknown error'}</p>`;
+            return;
+        }
+
+        const orders = result.orders || [];
+        if (orders.length === 0) {
+            container.innerHTML = '<p>No orders yet.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        orders.reverse().forEach(order => {
+            const itemsHTML = (order.items || []).map(item => {
+                const qty = item.qty || item.quantity || 1;
+                const price = Number(item.unitPrice || item.price || 0).toFixed(2);
+                return `
+                    <div class="order-item">
+                        <span>${item.name} × ${qty}</span>
+                        <span>$${price}</span>
+                    </div>`;
+            }).join('');
+
+            container.innerHTML += `
+                <div class="order-card">
+                    <div class="order-top">
+                        <div>
+                            <h2>Order #${order.id}</h2>
+                            <small>${order.createdAt}</small>
+                        </div>
+                        <span class="status">${order.status}</span>
+                    </div>
+                    <div class="items">${itemsHTML}</div>
+                    <div class="details">
+                        <p><b>Phone:</b> ${order.phone || 'Not provided'}</p>
+                        <p><b>Fulfilment:</b> ${order.fulfilment}</p>
+                        <p><b>Time:</b> ${order.time}</p>
+                        <p><b>Prep ETA:</b> ${order.estimatedPrepTime || 'TBD'}</p>
+                        ${order.notes ? `<p><b>Notes:</b> ${order.notes}</p>` : ''}
+                    </div>
+                    <div class="status-buttons">
+                        <button class="update" onclick="updateStatus('${order.id}', 'Accepted')">Accept</button>
+                        <button class="update" onclick="updateStatus('${order.id}', 'Preparing')">Preparing</button>
+                        <button class="update" onclick="updateStatus('${order.id}', 'Ready')">Ready</button>
+                        <button class="update" onclick="updateStatus('${order.id}', 'Completed')">Completed</button>
+                        <button class="cancel" onclick="cancelOrder('${order.id}')">Cancel</button>
+                        <button class="update" onclick="setEta('${order.id}')">Set ETA</button>
+                    </div>
+                </div>
+            `;
+        });
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = `
+            <p>❌ Cannot connect to backend. Make sure node server.js is running.</p>
+        `;
+    }
+}
+
+async function renderStats() {
+    try {
+        const response = await fetch(`${API_BASE}/api/orders`, { mode: 'cors' });
+        const result = await response.json();
+        if (!result.success) {
+            return;
+        }
+
+        const orders = result.orders || [];
+        const totalOrders = orders.length;
+        const openOrders = orders.filter(o => o.status !== 'Completed' && o.status !== 'Canceled').length;
+        const completedOrders = orders.filter(o => o.status === 'Completed').length;
+        const canceledOrders = orders.filter(o => o.status === 'Canceled').length;
+        const prepOrders = orders.filter(o => o.estimatedPrepTime).length;
+
+        document.getElementById('statsRow').innerHTML = `
+            <div class="stat-card"><h3>Total orders</h3><p>${totalOrders}</p></div>
+            <div class="stat-card"><h3>Open orders</h3><p>${openOrders}</p></div>
+            <div class="stat-card"><h3>Completed</h3><p>${completedOrders}</p></div>
+            <div class="stat-card"><h3>Canceled</h3><p>${canceledOrders}</p></div>
+            <div class="stat-card"><h3>Prep updates</h3><p>${prepOrders}</p></div>
+        `;
+    } catch (error) {
+        console.error('Stats fetch failed', error);
+    }
+}
+
+async function updateStatus(orderId, status, estimatedPrepTime) {
+    try {
+        const payload = { id: orderId };
+        if (status) payload.status = status;
+        if (typeof estimatedPrepTime !== 'undefined') payload.estimatedPrepTime = estimatedPrepTime;
+
+        const response = await fetch(`${API_BASE}/api/orders/status`, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Could not update order.');
+        }
+
+        loadDashboard();
+    } catch (error) {
+        console.error('STATUS ERROR:', error);
+        alert(error.message || 'Could not connect to backend.');
+    }
+}
+
+function cancelOrder(orderId) {
+    if (confirm('Cancel this order?')) {
+        updateStatus(orderId, 'Canceled');
+    }
+}
+
+function setEta(orderId) {
+    const eta = prompt('Enter estimated preparation time (e.g. 15 min):');
+    if (eta !== null) {
+        updateStatus(orderId, undefined, eta.trim());
+    }
+}
+
+showPanel('loginPanel');
+</script>
+</body>
+</html>
